@@ -1,0 +1,70 @@
+programs:
+  - name: okta
+    platform: bugcrowd
+    program_url: https://bugcrowd.com/okta
+    scope_type: limited
+    min_payable_severity: P4
+    policy_flags:
+      no_auth_bruteforce:
+        value: true
+        note: "Okta prohibits automated brute forcing of auth endpoints."
+      no_dos: true
+      no_port_scan: true
+    disabled_jobs:
+      - job_type: port_scan
+        note: "Only allow light recon unless explicitly approved."
+    rate_limits:
+      max_concurrent_jobs: 3
+      max_requests_per_minute: 120
+      max_http_qps: 0.5
+    targets:
+      - target: "okta.com"
+        target_type: domain
+        source: bugcrowd
+        wildcard: false
+        policy_flags: ["no_auth_bruteforce", "no_dos"]
+        note: "Primary corporate surface; keep HTTP concurrency conservative."
+      - target: "*.okta.com"
+        target_type: wildcard
+        source: bugcrowd
+        wildcard: true
+        policy_flags: ["no_auth_bruteforce", "no_dos", "no_port_scan"]
+      - target: "auth.okta.com"
+        target_type: api
+        source: vdppdf
+        wildcard: false
+        policy_flags: ["no_auth_bruteforce", "no_dos"]
+
+  - name: auth0_by_okta
+    platform: bugcrowd
+    program_url: https://bugcrowd.com/auth0-okta
+    scope_type: limited
+    min_payable_severity: P4
+    policy_flags:
+      no_auth_bruteforce: true
+      no_dos: true
+      no_port_scan: true
+    disabled_jobs:
+      - job_type: port_scan
+        note: "Auth0 prohibits aggressive port/service scanning."
+    rate_limits:
+      max_concurrent_jobs: 3
+      max_requests_per_minute: 120
+      max_http_qps: 0.5
+    targets:
+      - target: "auth0.com"
+        target_type: domain
+        source: bugcrowd
+        wildcard: false
+        policy_flags: ["no_auth_bruteforce", "no_dos"]
+        note: "Prefer template-based HTTP checks over brute force." 
+      - target: "*.auth0.com"
+        target_type: wildcard
+        source: bugcrowd
+        wildcard: true
+        policy_flags: ["no_auth_bruteforce", "no_dos", "no_port_scan"]
+      - target: "manage.auth0.com"
+        target_type: api
+        source: bugcrowd
+        wildcard: false
+        policy_flags: ["no_auth_bruteforce", "no_dos"]
