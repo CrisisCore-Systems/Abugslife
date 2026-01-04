@@ -1,0 +1,64 @@
+# Queue topology for Bugcrowd/Okta-aware recon automation
+# Suitable for RabbitMQ, Redis (via rq), or SQS naming.
+
+queues:
+  subenum:
+    workers: recon
+    dead_letter: subenum.dlq
+    max_concurrency_per_program: 2
+    notes: "Runs subdomain/asset discovery (e.g., subfinder, amass)."
+  alive_scan:
+    workers: http
+    dead_letter: alive_scan.dlq
+    max_concurrency_per_program: 5
+    notes: "httpx-style liveness checks and banner capture."
+  port_scan:
+    workers: recon
+    dead_letter: port_scan.dlq
+    max_concurrency_per_program: 1
+    allowed_when: "program.policy_flags.no_port_scan != true"
+    notes: "Optional deeper TCP/UDP probing only where allowed."
+  vuln_scan:
+    workers: vuln
+    dead_letter: vuln_scan.dlq
+    max_concurrency_per_program: 3
+    notes: "Nuclei and curated CVE templates tuned for identity stacks."
+  metadata:
+    workers: visual
+    dead_letter: metadata.dlq
+    max_concurrency_per_program: 2
+    notes: "Screenshots, tech fingerprinting, lightweight crawling."
+  lead_scoring:
+    workers: analysis
+    dead_letter: lead_scoring.dlq
+    max_concurrency_per_program: 4
+    notes: "Aggregates tags, template hits, freshness, and scope priority."
+
+declarations:
+  dead_letters:
+    - subenum.dlq
+    - alive_scan.dlq
+    - port_scan.dlq
+    - vuln_scan.dlq
+    - metadata.dlq
+    - lead_scoring.dlq
+
+rate_limits:
+  defaults:
+    max_http_qps: 1.0
+    max_requests_per_minute: 300
+  program_overrides:
+    okta:
+      max_http_qps: 0.5
+      max_requests_per_minute: 120
+      disabled_jobs: [port_scan]
+      policy_flags:
+        no_auth_bruteforce: true
+        no_dos: true
+    auth0_by_okta:
+      max_http_qps: 0.5
+      max_requests_per_minute: 120
+      disabled_jobs: [port_scan]
+      policy_flags:
+        no_auth_bruteforce: true
+        no_dos: true
